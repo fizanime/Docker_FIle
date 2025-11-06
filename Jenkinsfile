@@ -1,5 +1,5 @@
 //Scripted
-node {
+/*node {
     stage('Build') {
         echo "Build"
     }   
@@ -12,10 +12,10 @@ node {
         echo "Integration test"
     }
 }
-
+*/
 //Declarative
-/*pipeline {
-    agent {docker {image 'node:alpine3.21'}}
+pipeline {
+    agent {docker {image 'node:13.8'}}
     stages {
         stage('Build') {
             steps {
@@ -46,4 +46,4 @@ node {
             echo "This will run only if failed"
         }
     }
-}*/
+}
