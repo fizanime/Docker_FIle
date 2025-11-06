@@ -15,7 +15,7 @@
 
 //Declarative
 pipeline {
-    agent {docker{image 'maven:3.8.1' }}
+    agent any
     stages {
         stage('Build') {
             steps {
