@@ -22,6 +22,8 @@ pipeline {
                 //sh 'mvn --version'
                 //sh 'node --version'
                 echo "Build"
+                echo "BUILD_NUMBER - ${env.BUILD_NUMBER}"
+                echo "$PATH"
             }
         }
         stage('Test') {
