@@ -17,11 +17,11 @@
 pipeline {
     agent any
     
-    environment {
+    /*environment {
         dockerHome = tool 'docker'
         mavenHome = tool 'Maven3'
         PATH = "@dockerHome@/bin:@mavenHome@/bin:${env.PATH}"
-    }
+    }*/
     
     stages {
         stage('Build') {
