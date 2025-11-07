@@ -16,14 +16,24 @@
 //Declarative
 pipeline {
     agent any
+    
+    environment {
+        dockerHome = tool 'docker'
+        mavenHome = tool 'Maven3'
+        PATH = "@dockerHome@/bin:@mavenHome@/bin:${env.PATH}"
+    }
+    
     stages {
         stage('Build') {
             steps {
                 //sh 'mvn --version'
                 //sh 'node --version'
+                sh 'docker --version'
                 echo "Build"
                 echo "BUILD_NUMBER - ${env.BUILD_NUMBER}"
-                echo "$PATH"
+                echo "PATH - $PATH"
+                echo "JOB_NAME - ${env.JOB_NAME} "
+                echo "BUILD_ID - ${env.BUILD_ID} "
             }
         }
         stage('Test') {
