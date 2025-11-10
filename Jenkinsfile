@@ -36,6 +36,11 @@ pipeline {
                 echo "BUILD_ID - ${env.BUILD_ID} "
             }
         }
+        stage('Compile') {
+            steps{
+                sh "mvn clean compile"
+            }
+        }
         stage('Test') {
             steps{
                 echo "Test"
@@ -43,6 +48,7 @@ pipeline {
         }
         stage('Integration test') {
             steps{
+                sh "mvn failsafe:integration-test failsafe:verify"
                 echo "Integration test"
             }
         }
