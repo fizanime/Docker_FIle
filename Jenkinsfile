@@ -66,13 +66,13 @@ pipeline {
                             // Download a small Maven distribution to /tmp and run it (stateless)
                             sh '''
 set -e
-MAVEN_VERSION=3.9.4
+MAVEN_VERSION=3.9.5
 ARCHIVE=apache-maven-${MAVEN_VERSION}-bin.tar.gz
 URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/${ARCHIVE}
 echo "Downloading Maven ${MAVEN_VERSION}..."
 curl -fsSL "$URL" -o /tmp/${ARCHIVE}
 tar -xzf /tmp/${ARCHIVE} -C /tmp
-/tmp/apache-maven-${MAVEN_VERSION}/bin/mvn -B -V clean compile
+/tmp/apache-maven-${MAVEN_VERSION}/bin/mvn -B -V -s settings.xml --fail-fast clean compile
 '''
                         }
                     }
@@ -103,12 +103,12 @@ tar -xzf /tmp/${ARCHIVE} -C /tmp
                         } else {
                             sh '''
 set -e
-MAVEN_VERSION=3.9.4
+MAVEN_VERSION=3.9.5
 ARCHIVE=apache-maven-${MAVEN_VERSION}-bin.tar.gz
 URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/${ARCHIVE}
 curl -fsSL "$URL" -o /tmp/${ARCHIVE}
 tar -xzf /tmp/${ARCHIVE} -C /tmp
-/tmp/apache-maven-${MAVEN_VERSION}/bin/mvn -B -V failsafe:integration-test failsafe:verify
+/tmp/apache-maven-${MAVEN_VERSION}/bin/mvn -B -V -s settings.xml --fail-fast failsafe:integration-test failsafe:verify
 '''
                         }
                     }
