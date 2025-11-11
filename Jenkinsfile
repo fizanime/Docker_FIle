@@ -88,20 +88,27 @@ fi
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    // Configurable via env vars: DOCKER_IMAGE, IMAGE_TAG, DOCKER_REGISTRY_URL, DOCKER_CREDENTIALS_ID
-                    def imageName = env.DOCKER_IMAGE ?: 'fizanime/myapp'
-                    def imageTag = env.IMAGE_TAG ?: (env.BUILD_TAG ?: (env.BUILD_NUMBER ?: 'latest'))
-                    echo "Building Docker image ${imageName}:${imageTag} using DockerF.dockerfile"
-                    // Build using the project's Dockerfile. If your file is named differently, change the -f argument.
-                    dockerImage = docker.build("${imageName}:${imageTag}", "-f DockerF.dockerfile .")
+                    // First check whether Docker is usable on this agent. If not, skip build/push.
+                    def canUseDocker = sh(script: 'docker info >/dev/null 2>&1 && echo yes || echo no', returnStdout: true).trim() == 'yes'
+                    if (!canUseDocker) {
+                        echo "Docker daemon not reachable from this agent — skipping Docker build & push."
+                        echo "If you want this stage to run, ensure the agent has Docker and the Jenkins user can reach the daemon (or configure DOCKER_HOST correctly)."
+                    } else {
+                        // Configurable via env vars: DOCKER_IMAGE, IMAGE_TAG, DOCKER_REGISTRY_URL, DOCKER_CREDENTIALS_ID
+                        def imageName = env.DOCKER_IMAGE ?: 'fizanime/myapp'
+                        def imageTag = env.IMAGE_TAG ?: (env.BUILD_TAG ?: (env.BUILD_NUMBER ?: 'latest'))
+                        echo "Building Docker image ${imageName}:${imageTag} using DockerF.dockerfile"
+                        // Build using the project's Dockerfile. If your file is named differently, change the -f argument.
+                        dockerImage = docker.build("${imageName}:${imageTag}", "-f DockerF.dockerfile .")
 
-                    def creds = env.DOCKER_CREDENTIALS_ID ?: 'dockerhub'
-                    def registry = env.DOCKER_REGISTRY_URL ?: ''
-                    echo "Pushing image ${imageName}:${imageTag} to registry '${registry ?: 'Docker Hub (default)'}' with credentials '${creds}'"
-                    docker.withRegistry(registry, creds) {
-                        dockerImage.push()
-                        // also tag/push 'latest' for convenience
-                        dockerImage.push('latest')
+                        def creds = env.DOCKER_CREDENTIALS_ID ?: 'dockerhub'
+                        def registry = env.DOCKER_REGISTRY_URL ?: ''
+                        echo "Pushing image ${imageName}:${imageTag} to registry '${registry ?: 'Docker Hub (default)'}' with credentials '${creds}'"
+                        docker.withRegistry(registry, creds) {
+                            dockerImage.push()
+                            // also tag/push 'latest' for convenience
+                            dockerImage.push('latest')
+                        }
                     }
                 }
             }
