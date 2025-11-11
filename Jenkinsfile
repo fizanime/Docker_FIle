@@ -63,16 +63,21 @@ pipeline {
                         if (hasMvn) {
                             sh 'mvn -B -V -s settings.xml --fail-fast clean compile'
                         } else {
-                            // Download a small Maven distribution to /tmp and run it (stateless)
+                            // Download Maven once into the workspace cache and run it from there
                             sh '''
 set -e
 MAVEN_VERSION=3.9.5
 ARCHIVE=apache-maven-${MAVEN_VERSION}-bin.tar.gz
 URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/${ARCHIVE}
-echo "Downloading Maven ${MAVEN_VERSION}..."
-curl -fsSL "$URL" -o /tmp/${ARCHIVE}
-tar -xzf /tmp/${ARCHIVE} -C /tmp
-/tmp/apache-maven-${MAVEN_VERSION}/bin/mvn -B -V -s settings.xml --fail-fast clean compile
+# cache under the workspace to avoid re-downloading every build
+CACHE_DIR="${WORKSPACE}/.maven/apache-maven-${MAVEN_VERSION}"
+if [ ! -d "$CACHE_DIR" ]; then
+  mkdir -p "${WORKSPACE}/.maven"
+  echo "Downloading Maven ${MAVEN_VERSION}..."
+  curl -fsSL "$URL" -o /tmp/${ARCHIVE}
+  tar -xzf /tmp/${ARCHIVE} -C "${WORKSPACE}/.maven"
+fi
+"${CACHE_DIR}/bin/mvn" -B -V -s settings.xml --fail-fast clean compile
 '''
                         }
                     }
@@ -80,9 +85,25 @@ tar -xzf /tmp/${ARCHIVE} -C /tmp
             }
         }
 
-        stage('Test') {
+        stage('Build & Push Docker Image') {
             steps {
-                echo 'Test'
+                script {
+                    // Configurable via env vars: DOCKER_IMAGE, IMAGE_TAG, DOCKER_REGISTRY_URL, DOCKER_CREDENTIALS_ID
+                    def imageName = env.DOCKER_IMAGE ?: 'fizanime/myapp'
+                    def imageTag = env.IMAGE_TAG ?: (env.BUILD_TAG ?: (env.BUILD_NUMBER ?: 'latest'))
+                    echo "Building Docker image ${imageName}:${imageTag} using DockerF.dockerfile"
+                    // Build using the project's Dockerfile. If your file is named differently, change the -f argument.
+                    dockerImage = docker.build("${imageName}:${imageTag}", "-f DockerF.dockerfile .")
+
+                    def creds = env.DOCKER_CREDENTIALS_ID ?: 'dockerhub'
+                    def registry = env.DOCKER_REGISTRY_URL ?: ''
+                    echo "Pushing image ${imageName}:${imageTag} to registry '${registry ?: 'Docker Hub (default)'}' with credentials '${creds}'"
+                    docker.withRegistry(registry, creds) {
+                        dockerImage.push()
+                        // also tag/push 'latest' for convenience
+                        dockerImage.push('latest')
+                    }
+                }
             }
         }
 
@@ -106,9 +127,15 @@ set -e
 MAVEN_VERSION=3.9.5
 ARCHIVE=apache-maven-${MAVEN_VERSION}-bin.tar.gz
 URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/${ARCHIVE}
-curl -fsSL "$URL" -o /tmp/${ARCHIVE}
-tar -xzf /tmp/${ARCHIVE} -C /tmp
-/tmp/apache-maven-${MAVEN_VERSION}/bin/mvn -B -V -s settings.xml --fail-fast failsafe:integration-test failsafe:verify
+# cache under the workspace to avoid re-downloading every build
+CACHE_DIR="${WORKSPACE}/.maven/apache-maven-${MAVEN_VERSION}"
+if [ ! -d "$CACHE_DIR" ]; then
+  mkdir -p "${WORKSPACE}/.maven"
+  echo "Downloading Maven ${MAVEN_VERSION}..."
+  curl -fsSL "$URL" -o /tmp/${ARCHIVE}
+  tar -xzf /tmp/${ARCHIVE} -C "${WORKSPACE}/.maven"
+fi
+"${CACHE_DIR}/bin/mvn" -B -V -s settings.xml --fail-fast failsafe:integration-test failsafe:verify
 '''
                         }
                     }
